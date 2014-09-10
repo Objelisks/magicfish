@@ -52,26 +52,19 @@ define(function(require, exports) {
     }
   });
 
+  var rayDirections = [
+    new THREE.Vector3(1, 0, 0),
+    new THREE.Vector3(-1, 0, 0),
+    new THREE.Vector3(0, 0, 1),
+    new THREE.Vector3(0, 0, -1),
+  ];
 
-  var makePlayer = function(colliders) {
+
+  var makePlayer = function(terrainColliders) {
 
     var playerObj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial());
     playerObj.geometry.computeBoundingBox();
     playerObj.position.y = 4.5;
-
-    var lastPlayerPosition = playerObj.position.clone();
-    var checkCollision = function() {
-      var newPlayerPosition = playerObj.position.clone();
-      var playerCollider = new THREE.Box3().copy(playerObj.geometry.boundingBox).translate(playerObj.position);
-      var noCollisions = colliders.every(function(collider) {
-        return !playerCollider.isIntersectionBox(collider);
-      });
-      if(!noCollisions) {
-        playerObj.position.copy(lastPlayerPosition);
-      } else {
-        lastPlayerPosition.copy(newPlayerPosition);
-      }
-    }
 
     var movespeed = 3.5;
     controller.addEventListener('leftstickmoved', function(event) {
@@ -79,9 +72,20 @@ define(function(require, exports) {
       var rotation = -45 * Math.PI / 180;
       var dx = event.message.x * event.delta * Math.cos(rotation) + event.message.y * event.delta * -Math.sin(rotation);
       var dz = event.message.x * event.delta * Math.sin(rotation) + event.message.y * event.delta * Math.cos(rotation);
-      playerObj.position.x += dx * movespeed;
-      playerObj.position.z += dz * movespeed;
-      checkCollision();
+      var movement = new THREE.Vector3(dx * movespeed, 0, dz * movespeed);
+
+      var raycaster = new THREE.Raycaster(playerObj.position, rayDirections[0].clone(), 0, 0.5);
+      rayDirections.forEach(function(dir) {
+        raycaster.set(playerObj.position, dir);
+        var hits = raycaster.intersectObjects(terrainColliders, true);
+        hits.forEach(function(collision) {
+          if(collision.distance === 0.5) return;
+          movement.projectOnVector(collision.face.normal.clone().cross(playerObj.up));
+          movement.add(dir.clone().setLength(collision.distance-0.5));
+        });
+      });
+
+      playerObj.position.add(movement);
     });
 
     playerObj.add(inventoryObj);

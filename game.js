@@ -69,6 +69,8 @@ define(function(require, exports) {
 
   var terrainColliders = [];
   var waterColliders = [];
+  var houseInterior = [];
+  var houseTop;
   var sceneLoader = new THREE.SceneLoader();
   sceneLoader.load('./models/scene.js', function(model) {
 
@@ -82,10 +84,22 @@ define(function(require, exports) {
     var fishSpawn = [];
     model.groups['TerrainCollision'].forEach(buildVolume(model, terrainColliders));
     model.groups['WaterCollision'].forEach(buildVolume(model, waterColliders));
-    model.groups['FishSpawn'].forEach(buildVolume(model, fishSpawn, false));
+    model.groups['FishSpawn'].forEach(buildVolume(model, fishSpawn));
+    model.groups['HouseInterior'].forEach(buildVolume(model, houseInterior));
 
     scene.add(model.objects['Farm']);
-    scene.add(model.objects['House']);
+
+    var houseBase = model.objects['HouseBase'];
+    houseBase.material = new THREE.MeshLambertMaterial({color: 0x00aa00});
+    houseBase.material.shading = THREE.FlatShading;
+    scene.add(houseBase);
+    terrainColliders.push(houseBase);
+
+    houseTop = model.objects['HouseTop'];
+    houseTop.material = new THREE.MeshLambertMaterial({color: 0x00aa00});
+    houseTop.material.shading = THREE.FlatShading;
+    setTransparent(houseTop);
+    scene.add(houseTop);
 
     var terrain = model.objects['Terrain'];
     useShader(terrain, 'terrain');
@@ -98,25 +112,45 @@ define(function(require, exports) {
 
 
     // add fish
+    var fishes = [];
     for (var i = 0; i < 10; i++) {
-      var newFish = fish(scene, waterColliders);
+      var newFish = fish(scene, waterColliders, fishes);
       var volume = fishSpawn[Math.floor(Math.random()*fishSpawn.length)];
       var position = randomPointInBox(volume.geometry.boundingBox);
       position.add(volume.position);
       newFish.position.copy(position);
-      console.log(position);
       scene.add(newFish);
+      waterColliders.push(newFish);
     };
   });
 
   // add player
-  scene.add(player(terrainColliders));
+  var playerObj = player(terrainColliders);
+  scene.add(playerObj);
+
 
 
   var update = function(delta) {
     controller.update(delta);
     actions.update(delta);
     updates.update(delta);
+
+    if(houseTop) {
+      var anyContain = false;
+      houseInterior.forEach(function(box) {
+        var boxBox = new THREE.Box3().setFromObject(box);
+        var playerBox = new THREE.Box3().copy(playerObj.geometry.boundingBox).translate(playerObj.position);
+        if(boxBox.isIntersectionBox(playerBox)) {
+          anyContain = true;
+        }
+      });
+      console.log(anyContain);
+      if(anyContain) {
+        houseTop.material.opacity = Math.max(0.0, houseTop.material.opacity - delta * 5.0);
+      } else {
+        houseTop.material.opacity = Math.min(1.0, houseTop.material.opacity + delta * 5.0);
+      }
+    }
   }
 
   var render = function() {
