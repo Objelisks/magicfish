@@ -10,10 +10,7 @@ define(function(require, exports) {
   }
 
   var update = function(delta) {
-    var toDelete = Object.keys(actions).filter(function(i) { return (actions[i](delta)); });
-    for (var i = toDelete.length - 1; i >= 0; i--) {
-      delete actions[toDelete[i]];
-    };
+    Object.keys(actions).forEach(function(i) { actions[i](delta, i); });
   }
 
   var remove = function(id) {

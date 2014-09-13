@@ -18,10 +18,22 @@ define(function(require, exports) {
     });
   }
 
+  var buildVolume = function(scene, model, array, debugDraw) {
+    debugDraw = debugDraw || false;
+    return function(objName) {
+      var volume = model.objects[objName];
+      volume.geometry.computeBoundingBox();
+      volume.material = new THREE.MeshBasicMaterial({visible: debugDraw});
+      array.push(volume);
+      scene.add(volume);
+    }
+  }
+
   return {
     'model': model,
     'vertex': vertex,
     'fragment': fragment,
+    'buildVolume': buildVolume
   }
 
 });

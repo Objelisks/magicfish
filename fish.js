@@ -1,6 +1,6 @@
 define(function(require, exports) {
+  var actions = require('actions');
   var load = require('load');
-  var updates = require('updates');
   var world = require('world');
   var once = false;
 
@@ -14,27 +14,17 @@ define(function(require, exports) {
       fish.add(model);
     });
     fish.forward = new THREE.Vector3(0, 0, 1);
-    var fishRay = new THREE.ArrowHelper(fish.forward.clone(), new THREE.Vector3(), 1);
-    //fish.add(fishRay);
-    //fish.add(new THREE.AxisHelper());
 
     var movement = new THREE.Vector3();
-    updates.addEventListener('update', function(event) {
-      var delta = event.message;
-
+    actions.do(function(delta) {
       movement.copy(fish.forward);
 
       var rayPosition = fish.position.clone();
       var raycaster = new THREE.Raycaster(rayPosition, fish.forward.clone(), 0.1, 0.5);
       var collisions = raycaster.intersectObjects(waterColliders, true);
       if(collisions.length > 0) {
-        fishRay.setColor(0xff0000);
         //fish.forward.add(collisions[0].face.normal.clone().multiplyScalar(delta));
         fish.forward.applyAxisAngle(fish.up, Math.random() * 0.4 + 0.1);
-        //fish.children[1].material.color.setHex(0xff0000);
-      } else {
-        fishRay.setColor(0x00ff00);
-        //fish.children[1].material.color.setHex(0x00ff00);
       }
       var sideCheck = fish.forward.clone().applyAxisAngle(fish.up, Math.PI/4);
       raycaster.set(rayPosition, sideCheck);
